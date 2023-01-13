@@ -12,6 +12,7 @@ class pca_faces:
         self.data = np.array(self.data)
         self.sh = self.data.shape
         self.svds = []
+        self.offset = np.array([])
         self.pr_comp = self.pc()
 
     def plot_img(self):
@@ -22,10 +23,25 @@ class pca_faces:
 
         fig, axes = plt.subplots(faces,faces)
         for i, ax in enumerate(axes.flat):
-            ax.imshow(self.data[img[i],:].reshape(64,64), cmap='gray')
-            ax.tick_params(colors='w')
-            ax.xticks([])
-            ax.yticks([])
+            ax.imshow(self.data[int(i/faces)*10+(i%faces),:].reshape(64,64), cmap='gray')
+            #self.data[img[i],:].reshape(64,64), cmap='gray')
+            ax.set_xticks([])
+            ax.set_yticks([])
+        plt.show()
+
+    def plot_img_pc(self,person=0):
+        faces = 4
+        cmp = self.pr_comp
+        VT = self.svds[2]
+        prec = [1, 20, 100, 400]
+        fig, axes = plt.subplots(faces, faces)
+        for i, ax in enumerate(axes.flat):
+            #face_data = (cmp[int(i / faces) * 10 + (i % faces), :] @ VT) + self.offset
+            pr = prec[int(i/faces)]
+            face_data = (cmp[person*10+(i%faces),:pr] @ VT[:pr,:]) + self.offset
+            ax.imshow(face_data.reshape(64, 64), cmap='gray')
+            ax.set_xticks([])
+            ax.set_yticks([])
         plt.show()
 
     def pc_eig(self):
@@ -41,6 +57,7 @@ class pca_faces:
 
     def pc_svd(self):
         mean = np.average(self.data, axis=0)
+        self.offset = mean
         centered = self.data - (np.ones((self.sh[0], 1)) @ np.reshape(mean, (1, self.sh[1])))
         U, sigma, VT = np.linalg.svd(centered, full_matrices=False)
         self.svds = [U, sigma, VT]
@@ -79,7 +96,7 @@ class pca_faces:
         vars = np.zeros([len(ns),2])
         for i, n in enumerate(ns):
             red_cmp = U[:,:n] @ np.diag(sigma[:n])
-            avr_face = np.average(red_cmp, axis=0) @ VT[:n,:]
+            avr_face = np.average(red_cmp, axis=0) @ VT[:n,:] +self.offset #HERE
             axes[i].imshow(avr_face.reshape(64, 64), cmap='gray')
             axes[i].set_title('First ' + str(n) + ' PCs')
             axes[i].set_xticks([])
@@ -176,7 +193,17 @@ class pca_faces:
         axes[1].plot(acc_var)
         plt.show()
 
+    def show_greyscale(self):
+        gr = np.linspace(-1.0,1.0,201)
+        gr = gr.reshape(gr.size,1)
+        plt.imshow(gr, cmap='gray')
+        plt.show()
+
+
 pf = pca_faces()
-#pf.n_first_pcs(list(range(1,5))+list(range(10,171,20))+list(range(200,401,100)))
+#pf.plot_img()
+#pf.plot_img_pc()
+#pf.show_greyscale()
+pf.n_first_pcs(list(range(1,5))+list(range(10,171,20))+list(range(200,401,100)))
 #pf.pcs_with_var(np.linspace(0.1,1,9))
-pf.plot_nth_pc(ns=list(range(9)))
+#pf.plot_nth_pc(ns=list(range(9)))
