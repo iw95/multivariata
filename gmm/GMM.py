@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 class GMM:
 
@@ -107,6 +108,20 @@ class GMM:
         plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
         # save figure
         plt.savefig(f'img/gmm_iter{iteration}.png')
+        plt.close()
+
+        # plot contour lines
+        # reuse x, y, pos, mg1, mg2
+        fig = plt.figure()
+        colours = mcolors.BASE_COLORS
+        col_iter = iter(colours)
+        for k in range(self.k):
+            rv = multivariate_normal(self.mu[k], self.sigma[k])
+            z = rv.pdf(pos)
+            plt.contour(x,y,z,colors=next(col_iter))
+        plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
+        # save figure
+        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
         plt.close()
 
     def clustering(self):

@@ -3,22 +3,23 @@ from scipy.stats import multivariate_normal
 import GMM
 import kmeans
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import os
 
 
 def normal_data():
     # generating multivariate data
     mnd1 = multivariate_normal(np.array([0, 0]), np.array([[2, 0], [0, 3]]))
-    mnd2 = multivariate_normal(np.array([5, 2]), np.array([[1, 0.75], [0.75, 2]]))
+    mnd2 = multivariate_normal(np.array([3, 2]), np.array([[1, 0.75], [0.75, 2]]))
     n1 = 50
     n2 = 70
     data = np.concatenate((mnd1.rvs(n1), mnd2.rvs(n2)), axis=0)
     dist = lambda x: (n1 / (n1 + n2)) * mnd1.pdf(x) + (n2 / (n1 + n2)) * mnd2.pdf(x)
-    visualize(data, 2, dist)
+    visualize(data, 2, dist=dist, dist1=mnd1.pdf, dist2=mnd2.pdf)
     return data
 
 
-def visualize(data, k, dist):
+def visualize(data, k, dist, dist1, dist2): # Filled contour plot
     # choose dimension to create 2-dimensional image
     dim1, dim2 = 0, 1
     # compute frame
@@ -39,7 +40,22 @@ def visualize(data, k, dist):
     plt.contourf(x, y, z)
     plt.plot(data[:, dim1], data[:, dim2], 'k.')
     # save figure
-    plt.savefig(f'img/gmm_orig_dist.png')
+    plt.savefig(f'img/gmm_filled_orig.png')
+    plt.close()
+
+    colours = mcolors.BASE_COLORS
+    col_iter = iter(colours)
+    fig = plt.figure()
+    # distribution 1
+    z1 = dist2(pos)
+    plt.contour(x, y, z1, colors=next(col_iter))
+    # distribution 2
+    z2 = dist1(pos)
+    plt.contour(x, y, z2, colors=next(col_iter))
+    plt.plot(data[:, dim1], data[:, dim2], 'k.')
+    # save figure
+    plt.savefig(f'img/gmm_cont_orig.png')
+    plt.close()
 
 
 def gmm():
@@ -69,6 +85,7 @@ def main():
     clear_img()
     #gmm_on_kmeans()
     gmm()
+    #normal_data()
 
 
 if __name__ == "__main__":
