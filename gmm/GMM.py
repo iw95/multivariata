@@ -11,10 +11,12 @@ class GMM:
         shape = data.shape
         self.n = shape[0]
         self.dim = shape[1]
-        self.maxdims = np.array([np.array(np.min(data[:,d]),np.max(data[:,d])) for d in self.dim])
+        self.maxdims = np.zeros((k,2))
+        for d in range(k):
+            self.maxdims[d] = np.array([np.min(data[:,d]),np.max(data[:,d])])
 
         self.post_probs = np.zeros((self.n,k))
-        self.cl_probs = np.zeros((k))
+        self.cl_probs = np.zeros(k)
         self.mu, self.sigma = self.init_params()
         self.det = np.zeros(k)
 
@@ -24,7 +26,11 @@ class GMM:
         return self.rand_init()
 
     def rand_init(self):
-        return (np.random.rand(self.k, self.dim), np.random.rand(self.k,self.dim,self.dim))
+        self.cl_probs = np.ones((self.k)) * (1 / self.k)
+        rng = np.random.default_rng(12345)
+        # creating positive definite sigmas (!)
+        sigmas = [np.expand_dims(np.diag(rng.random(self.dim)), axis=0) for k in range(self.k)]
+        return rng.choice(self.data,self.k,replace=False), np.concatenate(sigmas)
 
     def update_det(self):
         for i in range(self.k):
@@ -46,7 +52,7 @@ class GMM:
         # update posterior probabilities
         for u in range(self.n):
             comp_dens = np.array([self.density_scipy(i,self.data[u]) for i in range(self.k)])
-            divisor = np.expand_dims(comp_dens,axis=0) @ np.expand_dims(self.cl_probs,axis=1)
+            divisor = np.max(np.expand_dims(comp_dens,axis=0) @ np.expand_dims(self.cl_probs,axis=1))
             for i in range(self.k):
                 self.post_probs[u,i] = comp_dens[i]*self.cl_probs[i] / divisor
 
@@ -54,9 +60,12 @@ class GMM:
         return abs(old_post_prob - self.post_probs) # return changes to evaluate convergence
 
     def maximize(self):
-        # compute new probabileies for each cluster
+        print('BEFORE MAXIMIZE')
+        print(f'cl_probs: {self.cl_probs[0]}---\nmu: -----\n{self.mu[0]}\nsigma: ----\n{self.sigma[0]}')
+        # compute new probabilities for each cluster
         sum_per_cluster = np.sum(self.post_probs,axis=0)
         self.cl_probs = sum_per_cluster / self.n
+        print(f'cl_probs: {self.cl_probs[0]}')
         # compute new means and variances
         for k in range(self.k):
             # new means
@@ -64,6 +73,9 @@ class GMM:
             # new variances
             self.sigma[k] = np.sum([self.post_probs[u,k] * (self.data-self.mu[k]) @ np.transpose(self.data-self.mu[k]) for u in range(self.n)])
             self.sigma[k] = self.sigma[k] / sum_per_cluster
+        print('MAXIMIZE')
+        print(f'cl_probs: {self.cl_probs[0]}---\nmu: -----\n{self.mu[0]}\nsigma: ----\n{self.sigma[0]}')
+        print('MAXIMIZE DONE')
         return
 
     def step(self):
@@ -75,18 +87,27 @@ class GMM:
         return True # Continue = True
 
     def visualize(self,iteration):
+        # choose dimension to create 2-dimensional image
         dim1, dim2 = 0, 1
+        # create meshgrid
         gran = 100
-        x, y = np.mgrid[np.linspace(self.maxdims[dim1,0],self.maxdims[dim1,0], gran), np.linspace(self.maxdims[dim2,0],self.maxdims[dim2,0], gran)]
+        mg1 = np.linspace(self.maxdims[dim1,0],self.maxdims[dim1,1], gran)
+        mg2 = np.linspace(self.maxdims[dim2,0],self.maxdims[dim2,1], gran)
+        x, y = np.meshgrid(mg1, mg2)
         pos = np.dstack((x, y))
+        # create plot
         fig = plt.figure()
         ax2 = fig.add_subplot(111)
-        z = np.zeros(gran,gran)
-        for k in self.k:
+        # calculate probability distribution
+        z = np.zeros((gran,gran))
+        for k in range(self.k):
+            print(f'{k}--------\n{self.sigma[k]}')
             rv = multivariate_normal(self.mu[k], self.sigma[k])
             z += self.cl_probs[k] * rv.pdf(pos)
+        # plot heat map and data points
         ax2.contourf(x, y, z)
         ax2.plt(self.data[:,dim1], self.data[:,dim2],'k.')
+        # save figure
         plt.savefig(f'img/iter{iteration}.png')
 
     def clustering(self):
