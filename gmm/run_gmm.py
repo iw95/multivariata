@@ -59,27 +59,27 @@ def visualize(data, k, dist, dist1, dist2): # Filled contour plot
     plt.close()
 
 
-def gmm(data=None, k=None, threshold=None):
+def gmm(data=None, k=None, threshold=None, labels=None):
     if data is None:
         data = gen_normal_data()
     if k is None:
         k = 2
     if threshold is None:
         threshold = 0.01
-    clustering = GMM.GMM(data=data,k=k, threshold=threshold)
+    clustering = GMM.GMM(data=data,k=k, threshold=threshold, labels=labels)
 
 
-def kmeaning(data=None, k=None, iterations=None):
+def kmeaning(data=None, k=None, iterations=None, labels=None):
     if data is None:
         data = gen_normal_data()
     if k is None:
         k = 2
     if iterations is None:
         iterations = 3
-    km = kmeans.Kmeans(data=data, k=k, iterations=iterations)
+    km = kmeans.Kmeans(data=data, k=k, iterations=iterations, labels=labels)
 
 
-def gmm_on_kmeans(data=None, k=None, iterations=None, threshold=None):
+def gmm_on_kmeans(data=None, k=None, iterations=None, threshold=None, labels=None):
     if data is None:
         data = gen_normal_data()
     if k is None:
@@ -88,9 +88,9 @@ def gmm_on_kmeans(data=None, k=None, iterations=None, threshold=None):
         iterations = 3
     if threshold is None:
         threshold = 0.01
-    km = kmeans.Kmeans(data=data, k=k, iterations=iterations)
+    km = kmeans.Kmeans(data=data, k=k, iterations=iterations, labels=labels)
     probs = np.concatenate([np.expand_dims(np.array(km.labels == i, dtype=float), axis=1) for i in range(k)], axis=1)
-    gmm = GMM.GMM(data=data, k=k, threshold=threshold, probs=probs)
+    gmm = GMM.GMM(data=data, k=k, threshold=threshold, probs=probs, labels=labels)
 
 
 def clear_img():
@@ -101,7 +101,8 @@ def clear_img():
 def main():
     clear_img()
     #gmm_on_kmeans()
-    gmm(data=get_data(),k=4,threshold=0.5)
+    data, labels = get_data()
+    gmm(data=data,k=4,threshold=0.5, labels=labels)
 
 
 if __name__ == "__main__":

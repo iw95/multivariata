@@ -4,7 +4,7 @@ import matplotlib.colors as mcolors
 
 
 class Kmeans:
-    def __init__(self, data, k, iterations=5):
+    def __init__(self, data, k, iterations=5, labels=None):
         self.data = data
         self.datashape = data.shape
         self.k = k

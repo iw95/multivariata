@@ -5,11 +5,12 @@ import matplotlib.colors as mcolors
 
 class GMM:
 
-    def __init__(self, data, k, threshold=0.1, probs=None):
+    def __init__(self, data, k, threshold=0.1, probs=None, labels=None):
         # initializing basic variables
         self.threshold = threshold
         self.k = k
         self.data = data
+        self.labels = labels
         shape = data.shape
         self.n = shape[0]
         self.dim = shape[1]
@@ -123,7 +124,7 @@ class GMM:
         colours = mcolors.BASE_COLORS
         col_iter = iter(colours)
         for k in range(self.k):
-            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing])
+            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing], allow_singular=True)
             z = rv.pdf(pos)
             plt.contour(x,y,z,colors=next(col_iter))
         plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
@@ -131,12 +132,88 @@ class GMM:
         plt.savefig(f'img/gmm_cont_iter{iteration}.png')
         plt.close()
 
+    def visualize_cont(self, iteration, probs=True):
+        # choose dimension to create 2-dimensional image
+        dim1, dim2 = 1, 6
+        slicing = slice(dim1, dim2 + 1, (dim2 - dim1))
+        # create meshgrid
+        gran = 100
+        mg1 = np.linspace(self.maxdims[dim1, 0], self.maxdims[dim1, 1], gran)
+        mg2 = np.linspace(self.maxdims[dim2, 0], self.maxdims[dim2, 1], gran)
+        x, y = np.meshgrid(mg1, mg2)
+        pos = np.dstack((x, y))
+        # plot contour lines
+        # reuse x, y, pos, mg1, mg2
+        fig = plt.figure()
+        plt.xlabel(self.labels[dim1])
+        plt.ylabel(self.labels[dim2])
+        colours = mcolors.BASE_COLORS
+        col_iter = iter(colours)
+        # meteorological seasons: spring: 1.3., summer: 1.6., autumn: 1.9., winter: 1.12.
+        seasons = np.array([31 + 28, 31 + 30 + 31, 30 + 31 + 31, 30 + 31 + 30])
+        season_cols = [mcolors.CSS4_COLORS['lightgreen'], mcolors.CSS4_COLORS['plum'],
+                       mcolors.CSS4_COLORS['sandybrown'], mcolors.CSS4_COLORS['lightskyblue']]
+
+        # plotting seasons with different colors
+        for s in range(4):  # winter spring summer autumn
+            plt.plot(self.data[seasons[s]:seasons[(s + 1) % 4], dim1],
+                     self.data[seasons[s]:seasons[(s + 1) % 4], dim2],
+                     color=season_cols[s], marker='.', linestyle='')
+
+        for k in range(self.k * int(probs)):
+            rv = multivariate_normal(self.mu[k, slicing], self.sigma[k, slicing, slicing], allow_singular=True)
+            z = rv.pdf(pos)
+            plt.contour(x, y, z, colors=next(col_iter))
+        # save figure
+        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
+        plt.close()
+
+    def visualize_dims(self, iteration):
+        # meteorological seasons: winter: 1.12., spring: 1.3., summer: 1.6., autumn: 1.9.
+        seasons = np.array([-31, 31+28, 31+28+31+30+31, 31+28+31+30+31+30+31+31])
+        season_cols = [mcolors.CSS4_COLORS['lightskyblue'],mcolors.CSS4_COLORS['lightgreen'],
+                       mcolors.CSS4_COLORS['plum'],mcolors.CSS4_COLORS['sandybrown']]
+        # create meshgrid
+        fig, axs = plt.subplots(self.dim, self.dim, sharex='all', sharey='all')
+        # setting labels for plot rows and columns
+        for i, ax in enumerate(axs):
+            for j,a in enumerate(ax):
+                axs[j,i].set(xlabel=self.labels[i], ylabel=self.labels[j])
+                axs[j,i].label_outer()
+
+        colours = mcolors.BASE_COLORS
+        gran = 100
+        for dim1 in range(self.dim):
+            mg1 = np.linspace(self.maxdims[dim1, 0], self.maxdims[dim1, 1], gran)
+            for dim2 in range(dim1+1,self.dim):
+                slicing = slice(dim1, dim2 + 1, (dim2 - dim1))
+                mg2 = np.linspace(self.maxdims[dim2, 0], self.maxdims[dim2, 1], gran)
+                x, y = np.meshgrid(mg1, mg2)
+                pos = np.dstack((x, y))
+                # plot contour lines
+                col_iter = iter(colours)
+                for k in range(self.k):
+                    rv = multivariate_normal(self.mu[k, slicing], self.sigma[k, slicing, slicing], allow_singular=True)
+                    z = rv.pdf(pos)
+                    axs[dim1,dim2].contour(x, y, z, colors=next(col_iter))
+                    axs[dim2, dim1].contour(x, y, z, colors=next(col_iter))
+                # plotting seasons with different colors
+                for s in range(4): # spring summer autumn winter
+                    axs[dim1,dim2].plot(self.data[seasons[s]:seasons[(s+1)%4], dim1], self.data[seasons[s]:seasons[(s+1)%4], dim2], color=season_cols[s], marker='.')
+                    axs[dim2, dim1].plot(self.data[seasons[s]:seasons[(s+1)%4], dim1], self.data[seasons[s]:seasons[(s+1)%4], dim2], color=season_cols[s], marker='.')
+                # TODO find way to plot winter points!!!
+        # save figure
+        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
+        plt.close()
+
     def clustering(self):
         # Parameters already initialized in init
         iteration = 0
-        self.visualize(iteration)
+        self.visualize_cont(iteration=-1, probs=False)
+        self.visualize_cont(iteration)
         while self.step():
             iteration = iteration + 1
-            self.visualize(iteration)
+            self.visualize_cont(iteration)
+            print(f'Iteration {iteration}')
         return iteration
 
