@@ -2,12 +2,13 @@ import numpy as np
 from scipy.stats import multivariate_normal
 import GMM
 import kmeans
+from open_data import get_data
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import os
 
 
-def normal_data():
+def gen_normal_data():
     # generating multivariate data
     mnd1 = multivariate_normal(np.array([0, 0]), np.array([[2, 0], [0, 3]]))
     mnd2 = multivariate_normal(np.array([3, 2]), np.array([[1, 0.75], [0.75, 2]]))
@@ -58,22 +59,38 @@ def visualize(data, k, dist, dist1, dist2): # Filled contour plot
     plt.close()
 
 
-def gmm():
-    data = normal_data()
-    clustering = GMM.GMM(data, 2, threshold=0.01)
+def gmm(data=None, k=None, threshold=None):
+    if data is None:
+        data = gen_normal_data()
+    if k is None:
+        k = 2
+    if threshold is None:
+        threshold = 0.01
+    clustering = GMM.GMM(data=data,k=k, threshold=threshold)
 
 
-def kmeaning():
-    data = normal_data()
-    km = kmeans.Kmeans(data, 2, iterations=3)
+def kmeaning(data=None, k=None, iterations=None):
+    if data is None:
+        data = gen_normal_data()
+    if k is None:
+        k = 2
+    if iterations is None:
+        iterations = 3
+    km = kmeans.Kmeans(data=data, k=k, iterations=iterations)
 
 
-def gmm_on_kmeans():
-    k = 2
-    data = normal_data()
-    km = kmeans.Kmeans(data, k, iterations=3)
+def gmm_on_kmeans(data=None, k=None, iterations=None, threshold=None):
+    if data is None:
+        data = gen_normal_data()
+    if k is None:
+        k = 2
+    if iterations is None:
+        iterations = 3
+    if threshold is None:
+        threshold = 0.01
+    km = kmeans.Kmeans(data=data, k=k, iterations=iterations)
     probs = np.concatenate([np.expand_dims(np.array(km.labels == i, dtype=float), axis=1) for i in range(k)], axis=1)
-    gmm = GMM.GMM(data, k=k, threshold=0.01, probs=probs)
+    gmm = GMM.GMM(data=data, k=k, threshold=threshold, probs=probs)
 
 
 def clear_img():
@@ -84,8 +101,7 @@ def clear_img():
 def main():
     clear_img()
     #gmm_on_kmeans()
-    gmm()
-    #normal_data()
+    gmm(data=get_data(),k=4,threshold=0.5)
 
 
 if __name__ == "__main__":

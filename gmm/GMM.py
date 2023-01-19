@@ -38,7 +38,10 @@ class GMM:
         self.cl_probs = np.ones((self.k)) * (1 / self.k)
         rng = np.random.default_rng(12345)
         # creating positive definite sigmas (!)
-        sigmas = [np.expand_dims(np.diag(rng.random(self.dim)), axis=0) for k in range(self.k)]
+        sigmas = []
+        for k in range(self.k):
+            sigmas.append(np.expand_dims(np.diag((self.maxdims[:,1]-self.maxdims[:,0])/self.k), axis=0))
+        # rng.random(self.dim)) made posterior probabilities zero
         return rng.choice(self.data,self.k,replace=False), np.concatenate(sigmas)
 
     def update_det(self):
@@ -52,7 +55,7 @@ class GMM:
         return factor * np.exp(-0.5 * (np.transpose(x-self.mu[k]) @ np.linalg.inv(self.sigma[k]) @ (x-self.mu[k])))
 
     def density_scipy(self,k,x): # using scipy
-        mnd = multivariate_normal(self.mu[k], self.sigma[k])
+        mnd = multivariate_normal(self.mu[k], self.sigma[k],allow_singular=True)
         return mnd.pdf(x) # probability density function
 
     def estimate(self):
@@ -62,6 +65,9 @@ class GMM:
         for u in range(self.n):
             comp_dens = np.array([self.density_scipy(i,self.data[u]) for i in range(self.k)]) # shape (k,)
             divisor = np.dot(comp_dens, self.cl_probs)
+            if divisor == 0.:
+                divisor = 1
+                print("DIVISOR WAS ZERO")
             self.post_probs[u] = comp_dens*self.cl_probs / divisor
         return abs(old_post_prob - self.post_probs) # return changes to evaluate convergence
 
@@ -88,7 +94,8 @@ class GMM:
 
     def visualize(self,iteration):
         # choose dimension to create 2-dimensional image
-        dim1, dim2 = 0, 1
+        dim1, dim2 = 1, 6
+        slicing = slice(dim1,dim2+1,(dim2-dim1))
         # create meshgrid
         gran = 100
         mg1 = np.linspace(self.maxdims[dim1,0],self.maxdims[dim1,1], gran)
@@ -101,7 +108,7 @@ class GMM:
         z = np.zeros((gran,gran))
         for k in range(self.k):
             print(f'Sigma for cluster {k} in iteration {iteration}\n{self.sigma[k]}')
-            rv = multivariate_normal(self.mu[k], self.sigma[k])
+            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing])
             z += self.cl_probs[k] * rv.pdf(pos)
         # plot heat map and data points
         plt.contourf(x, y, z)
@@ -116,7 +123,7 @@ class GMM:
         colours = mcolors.BASE_COLORS
         col_iter = iter(colours)
         for k in range(self.k):
-            rv = multivariate_normal(self.mu[k], self.sigma[k])
+            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing])
             z = rv.pdf(pos)
             plt.contour(x,y,z,colors=next(col_iter))
         plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
