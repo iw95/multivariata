@@ -2,10 +2,16 @@ import numpy as np
 from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from visualize import visualize_cont
+import csv
 
 class GMM:
 
     def __init__(self, data, k, threshold=0.1, probs=None, labels=None):
+        # initialize logging
+        self.file = open(f'logs_{k}/params.csv', 'w')
+        self.writer = csv.writer(self.file)
+
         # initializing basic variables
         self.threshold = threshold
         self.k = k
@@ -93,127 +99,44 @@ class GMM:
         self.maximize()
         return True # Continue = True
 
-    def visualize(self,iteration):
-        # choose dimension to create 2-dimensional image
-        dim1, dim2 = 1, 6
-        slicing = slice(dim1,dim2+1,(dim2-dim1))
-        # create meshgrid
-        gran = 100
-        mg1 = np.linspace(self.maxdims[dim1,0],self.maxdims[dim1,1], gran)
-        mg2 = np.linspace(self.maxdims[dim2,0],self.maxdims[dim2,1], gran)
-        x, y = np.meshgrid(mg1, mg2)
-        pos = np.dstack((x, y))
-        # create plot
-        fig = plt.figure()
-        # calculate probability distribution
-        z = np.zeros((gran,gran))
-        for k in range(self.k):
-            print(f'Sigma for cluster {k} in iteration {iteration}\n{self.sigma[k]}')
-            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing])
-            z += self.cl_probs[k] * rv.pdf(pos)
-        # plot heat map and data points
-        plt.contourf(x, y, z)
-        plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
-        # save figure
-        plt.savefig(f'img/gmm_iter{iteration}.png')
-        plt.close()
-
-        # plot contour lines
-        # reuse x, y, pos, mg1, mg2
-        fig = plt.figure()
-        colours = mcolors.BASE_COLORS
-        col_iter = iter(colours)
-        for k in range(self.k):
-            rv = multivariate_normal(self.mu[k,slicing], self.sigma[k,slicing,slicing], allow_singular=True)
-            z = rv.pdf(pos)
-            plt.contour(x,y,z,colors=next(col_iter))
-        plt.plot(self.data[:,dim1], self.data[:,dim2],'k.')
-        # save figure
-        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
-        plt.close()
-
-    def visualize_cont(self, iteration, probs=True):
-        # choose dimension to create 2-dimensional image
-        dim1, dim2 = 1, 6
-        slicing = slice(dim1, dim2 + 1, (dim2 - dim1))
-        # create meshgrid
-        gran = 100
-        mg1 = np.linspace(self.maxdims[dim1, 0], self.maxdims[dim1, 1], gran)
-        mg2 = np.linspace(self.maxdims[dim2, 0], self.maxdims[dim2, 1], gran)
-        x, y = np.meshgrid(mg1, mg2)
-        pos = np.dstack((x, y))
-        # plot contour lines
-        # reuse x, y, pos, mg1, mg2
-        fig = plt.figure()
-        plt.xlabel(self.labels[dim1])
-        plt.ylabel(self.labels[dim2])
-        colours = mcolors.BASE_COLORS
-        col_iter = iter(colours)
-        # meteorological seasons: spring: 1.3., summer: 1.6., autumn: 1.9., winter: 1.12.
-        seasons = np.array([31 + 28, 31 + 30 + 31, 30 + 31 + 31, 30 + 31 + 30])
-        season_cols = [mcolors.CSS4_COLORS['lightgreen'], mcolors.CSS4_COLORS['plum'],
-                       mcolors.CSS4_COLORS['sandybrown'], mcolors.CSS4_COLORS['lightskyblue']]
-
-        # plotting seasons with different colors
-        for s in range(4):  # winter spring summer autumn
-            plt.plot(self.data[seasons[s]:seasons[(s + 1) % 4], dim1],
-                     self.data[seasons[s]:seasons[(s + 1) % 4], dim2],
-                     color=season_cols[s], marker='.', linestyle='')
-
-        for k in range(self.k * int(probs)):
-            rv = multivariate_normal(self.mu[k, slicing], self.sigma[k, slicing, slicing], allow_singular=True)
-            z = rv.pdf(pos)
-            plt.contour(x, y, z, colors=next(col_iter))
-        # save figure
-        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
-        plt.close()
-
-    def visualize_dims(self, iteration):
-        # meteorological seasons: winter: 1.12., spring: 1.3., summer: 1.6., autumn: 1.9.
-        seasons = np.array([-31, 31+28, 31+28+31+30+31, 31+28+31+30+31+30+31+31])
-        season_cols = [mcolors.CSS4_COLORS['lightskyblue'],mcolors.CSS4_COLORS['lightgreen'],
-                       mcolors.CSS4_COLORS['plum'],mcolors.CSS4_COLORS['sandybrown']]
-        # create meshgrid
-        fig, axs = plt.subplots(self.dim, self.dim, sharex='all', sharey='all')
-        # setting labels for plot rows and columns
-        for i, ax in enumerate(axs):
-            for j,a in enumerate(ax):
-                axs[j,i].set(xlabel=self.labels[i], ylabel=self.labels[j])
-                axs[j,i].label_outer()
-
-        colours = mcolors.BASE_COLORS
-        gran = 100
-        for dim1 in range(self.dim):
-            mg1 = np.linspace(self.maxdims[dim1, 0], self.maxdims[dim1, 1], gran)
-            for dim2 in range(dim1+1,self.dim):
-                slicing = slice(dim1, dim2 + 1, (dim2 - dim1))
-                mg2 = np.linspace(self.maxdims[dim2, 0], self.maxdims[dim2, 1], gran)
-                x, y = np.meshgrid(mg1, mg2)
-                pos = np.dstack((x, y))
-                # plot contour lines
-                col_iter = iter(colours)
-                for k in range(self.k):
-                    rv = multivariate_normal(self.mu[k, slicing], self.sigma[k, slicing, slicing], allow_singular=True)
-                    z = rv.pdf(pos)
-                    axs[dim1,dim2].contour(x, y, z, colors=next(col_iter))
-                    axs[dim2, dim1].contour(x, y, z, colors=next(col_iter))
-                # plotting seasons with different colors
-                for s in range(4): # spring summer autumn winter
-                    axs[dim1,dim2].plot(self.data[seasons[s]:seasons[(s+1)%4], dim1], self.data[seasons[s]:seasons[(s+1)%4], dim2], color=season_cols[s], marker='.')
-                    axs[dim2, dim1].plot(self.data[seasons[s]:seasons[(s+1)%4], dim1], self.data[seasons[s]:seasons[(s+1)%4], dim2], color=season_cols[s], marker='.')
-                # TODO find way to plot winter points!!!
-        # save figure
-        plt.savefig(f'img/gmm_cont_iter{iteration}.png')
-        plt.close()
-
     def clustering(self):
         # Parameters already initialized in init
         iteration = 0
-        self.visualize_cont(iteration=-1, probs=False)
-        self.visualize_cont(iteration)
+        #self.visualize_cont(gmm=self, iteration=-1, probs=False)
+        #self.visualize_cont(gmm=self, iteration=iteration)
+        self.log_params(iteration)
         while self.step():
             iteration = iteration + 1
-            self.visualize_cont(iteration)
+            self.log_params(iteration=iteration)
+            #self.visualize_cont(gmm=self, iteration=iteration)
             print(f'Iteration {iteration}')
+        self.log_pis()
+        self.file.close()
         return iteration
+
+    def log_pis(self):
+        with open(f'logs_{self.k}/pis.csv','w') as file:
+            writer = csv.writer(file)
+            row = ['day']
+            row += list(map(lambda s: 'cluster'+str(s), range(self.k)))
+            row += ['weighted_mean', 'max']
+            writer.writerow(row)
+            for i, point in enumerate(self.post_probs):
+                row = [i] + list(self.post_probs[i])
+                row += [np.inner(self.post_probs[i], np.arange(0,self.k))] # mean
+                row += [np.argmax(self.post_probs[i])] # max
+                writer.writerow(row)
+        return
+
+    def log_params(self, iteration):
+        if iteration == 0:
+            row = ['day','cluster',]
+            row += list(map(lambda s: 'cluster'+str(s), range(self.k)))
+            row += list(map(lambda la: la+'_mu', self.labels))
+            idxs = np.concatenate([[str(i)+str(j) for j in range(self.dim)] for i in range(self.dim)])
+            row += list(map(lambda i: 'sigma'+i, idxs))
+            self.writer.writerow(row)
+        for k in range(self.k):
+            row = [int(iteration),int(k)] + list(self.cl_probs) + list(self.mu[k]) + list(self.sigma[k].flatten())
+            self.writer.writerow(row)
 

@@ -18,3 +18,11 @@ def get_header():
             header = row[1:]
             break
     return header
+
+
+def get_probs(k=3):
+    data = np.genfromtxt(f'logs_{k}/pis.csv', delimiter=',')
+    data = data[1:]  # discard header
+    data = np.array(data[:, 1:], dtype=float)  # remove label and cast to float
+    assert np.nan not in data
+    return data # for each u: [p_u,i] mean_u argmax_u

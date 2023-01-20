@@ -99,10 +99,13 @@ def clear_img():
 
 
 def main():
-    clear_img()
+    #clear_img()
     #gmm_on_kmeans()
     data, labels = get_data()
-    gmm(data=data,k=4,threshold=0.5, labels=labels)
+    for k in range(2,7):
+        print(f'starting with k={k}')
+        gmm(data=data,k=k,threshold=0.5, labels=labels)
+        print('done')
 
 
 if __name__ == "__main__":
