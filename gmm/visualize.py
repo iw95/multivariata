@@ -147,9 +147,8 @@ def vis_calendar(k):
 
 
 def main():
-    vis_calendar(2)
-    vis_calendar(6)
-    vis_calendar(7)
+    for i in range(2,8):
+        vis_calendar(i)
 
 if __name__ == '__main__':
     main()

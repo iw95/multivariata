@@ -26,7 +26,7 @@ class Kmeans:
                 dist[:,k] = np.linalg.norm(self.data - np.outer(np.ones((self.datashape[0],1)), self.means[k]), axis=1)
             self.labels = np.argmin(dist, axis=1)
             # visualize
-            self.visualize(i)
+            #self.visualize(i)
             # recompute means
             for k in range(self.k):
                 la_k = self.labels==k

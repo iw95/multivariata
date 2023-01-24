@@ -20,6 +20,16 @@ def gen_normal_data():
     return data
 
 
+def gen_normal_data1():
+    # generating multivariate data
+    mnd = multivariate_normal(np.array([3, 2]), np.array([[1, -0.75], [-0.75, 2]]))
+    n = 120
+    dist = mnd.pdf
+    data = mnd.rvs(n)
+    visualize(data, 1, dist=dist, dist1=dist, dist2=dist)
+    return data
+
+
 def visualize(data, k, dist, dist1, dist2): # Filled contour plot
     # choose dimension to create 2-dimensional image
     dim1, dim2 = 0, 1
@@ -89,6 +99,7 @@ def gmm_on_kmeans(data=None, k=None, iterations=None, threshold=None, labels=Non
     if threshold is None:
         threshold = 0.01
     km = kmeans.Kmeans(data=data, k=k, iterations=iterations, labels=labels)
+    print(f'kmeans done for k={k}')
     probs = np.concatenate([np.expand_dims(np.array(km.labels == i, dtype=float), axis=1) for i in range(k)], axis=1)
     gmm = GMM.GMM(data=data, k=k, threshold=threshold, probs=probs, labels=labels)
 
@@ -102,9 +113,9 @@ def main():
     #clear_img()
     #gmm_on_kmeans()
     data, labels = get_data()
-    for k in range(2,7):
+    for k in range(2,8):
         print(f'starting with k={k}')
-        gmm(data=data,k=k,threshold=0.5, labels=labels)
+        gmm(data=data, k=k, threshold=0.5, labels=labels)
         print('done')
 
 

@@ -7,13 +7,14 @@ import csv
 
 class GMM:
 
-    def __init__(self, data, k, threshold=0.1, probs=None, labels=None):
+    def __init__(self, data, k, threshold=0.1, max_iter=1000, probs=None, labels=None):
         # initialize logging
         self.file = open(f'logs_{k}/params.csv', 'w')
         self.writer = csv.writer(self.file)
 
         # initializing basic variables
         self.threshold = threshold
+        self.max_iter = max_iter
         self.k = k
         self.data = data
         self.labels = labels
@@ -110,6 +111,9 @@ class GMM:
             self.log_params(iteration=iteration)
             #self.visualize_cont(gmm=self, iteration=iteration)
             print(f'Iteration {iteration}')
+            if iteration==self.max_iter:
+                print('Reached maximum number of iterations')
+                break
         self.log_pis()
         self.file.close()
         return iteration
