@@ -3,6 +3,7 @@ from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from open_data import get_probs
+from open_data import get_params
 
 
 def visualize(gmm ,iteration):
@@ -86,42 +87,45 @@ def visualize_cont(gmm, iteration, probs=True):
     plt.close()
 
 
-def visualize_dims(gmm, iteration):
-    # meteorological seasons: winter: 1.12., spring: 1.3., summer: 1.6., autumn: 1.9.
-    seasons = np.array([-31, 31+28, 31+28+31+30+31, 31+28+31+30+31+30+31+31])
-    season_cols = [mcolors.CSS4_COLORS['lightskyblue'], mcolors.CSS4_COLORS['lightgreen'],
-                   mcolors.CSS4_COLORS['plum'], mcolors.CSS4_COLORS['sandybrown']]
-    # create meshgrid
-    fig, axs = plt.subplots(gmm.dim, gmm.dim, sharex='all', sharey='all')
-    # setting labels for plot rows and columns
-    for i, ax in enumerate(axs):
-        for j, a in enumerate(ax):
-            axs[j,i].set(xlabel=gmm.labels[i], ylabel=gmm.labels[j])
-            axs[j,i].label_outer()
+def visualize_dims(k, kmeans=False, first_setup=True):
+    inittype = 'kmeans_init' if kmeans else 'random_init'
+    setup = 'first_setup' if first_setup else 'second_setup'
 
+    data, labels, dim, mu, sigma, maxdims = get_params(k=k, kmeans=kmeans, first_setup=first_setup)
+
+    seasons = np.array([31 + 28, 31 + 30 + 31, 30 + 31 + 31, 30 + 31 + 30, 31, 31 + 28 -365])
+    seasons = [np.sum(seasons[:i]) for i in range(1,len(seasons)+1)]
+    season_cols = [mcolors.CSS4_COLORS['lightgreen'], mcolors.CSS4_COLORS['plum'],
+                   mcolors.CSS4_COLORS['sandybrown'], mcolors.CSS4_COLORS['lightskyblue'],
+                   mcolors.CSS4_COLORS['lightskyblue']]
     colours = mcolors.BASE_COLORS
     gran = 100
-    for dim1 in range(gmm.dim):
-        mg1 = np.linspace(gmm.maxdims[dim1, 0], gmm.maxdims[dim1, 1], gran)
-        for dim2 in range(dim1+1,gmm.dim):
+    for dim1 in range(dim):
+        mg1 = np.linspace(maxdims[dim1, 0], maxdims[dim1, 1], gran)
+        for dim2 in range(dim1+1,dim):
+            print(f'k={k}, dim1={dim1}, dim2={dim2}')
+            fig2,ax = plt.subplots()
+            ax.set(xlabel=labels[dim1], ylabel=labels[dim2])
             slicing = slice(dim1, dim2+1, (dim2-dim1))
-            mg2 = np.linspace(gmm.maxdims[dim2, 0], gmm.maxdims[dim2, 1], gran)
+            mg2 = np.linspace(maxdims[dim2, 0], maxdims[dim2, 1], gran)
             x, y = np.meshgrid(mg1, mg2)
             pos = np.dstack((x, y))
             # plot contour lines
             col_iter = iter(colours)
-            for k in range(gmm.k):
-                rv = multivariate_normal(gmm.mu[k, slicing], gmm.sigma[k, slicing, slicing], allow_singular=True)
+            for i in range(k):
+                rv = multivariate_normal(mu[i, slicing], sigma[i, slicing, slicing], allow_singular=True)
                 z = rv.pdf(pos)
-                axs[dim1, dim2].contour(x, y, z, colors=next(col_iter))
-                axs[dim2, dim1].contour(x, y, z, colors=next(col_iter))
+                ax.contour(x, y, z, colors=next(col_iter))
             # plotting seasons with different colors
-            for s in range(4): # winter spring summer autumn
-                axs[dim1, dim2].plot(gmm.data[seasons[s]:seasons[(s+1) % 4], dim1], gmm.data[seasons[s]:seasons[(s+1) %4], dim2], color=season_cols[s], marker='.')
-                axs[dim2, dim1].plot(gmm.data[seasons[s]:seasons[(s+1) % 4], dim1], gmm.data[seasons[s]:seasons[(s+1) %4], dim2], color=season_cols[s], marker='.')
-    # save figure
-    plt.savefig(f'img/gmm_cont_iter{iteration}.png')
-    plt.close()
+            for s in range(5):  # spring summer autumn winter winter
+                startdate = seasons[s] % seasons[4]
+                enddate = seasons[s + 1]
+                ax.plot(data[startdate:enddate, dim1],
+                         data[startdate:enddate, dim2],
+                         color=season_cols[s], marker='.', linestyle='')
+            # save figure
+            plt.savefig(f'{setup}/{inittype}/img/gmm_k={k}_{dim1}{dim2}.png')
+            plt.close()
 
 
 def vis_calendar(k):
@@ -148,7 +152,9 @@ def vis_calendar(k):
 
 def main():
     for i in range(2,8):
-        vis_calendar(i)
+        #vis_calendar(i)
+        # visualize final distributions
+        visualize_dims(k=i,kmeans=False)
 
 if __name__ == '__main__':
     main()
